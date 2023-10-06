@@ -1,6 +1,10 @@
+from rest_framework import viewsets
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from .models import Celebrity, Movie, MovieAndCelebritiesMapping
+
+from .serializers import MovieCelebritiesMappingSerializer
+from .models import MovieAndCelebritiesMapping
+
 # pylint:disable=no-member
 
 
@@ -20,3 +24,34 @@ def get_celebrities_for_movie(request):
         ]
     }
     return Response(data)
+
+
+class MovieCelebritiesViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = MovieAndCelebritiesMapping.objects.all()
+
+    def list(self, request):
+        movie_id = request.query_params.get('movie_id')
+        print("movie_id:", movie_id)
+        if movie_id:
+            queryset = MovieAndCelebritiesMapping.objects.filter(
+                movie_id=movie_id)
+
+            celebrities = [mapping.celebrity for mapping in queryset]
+            data = {
+                'celebrities': [
+                    {
+                        'celebrity_id': celebrity.celebrity_id,
+                        'celebrity_name': celebrity.celebrity_name,
+                        'celebrity_image_url': celebrity.celebrity_image_url
+                    }
+                    for celebrity in celebrities
+                ]
+            }
+
+            return Response(data)
+
+        else:
+            queryset = MovieAndCelebritiesMapping.objects.none()
+
+        serializer = MovieCelebritiesMappingSerializer(queryset, many=True)
+        return Response(serializer.data)
